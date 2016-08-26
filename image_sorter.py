@@ -65,7 +65,7 @@ def copy_file(config, old_file_name, new_file_name):
 
 def get_new_image_path(config, image_data):
     new_path = config['output_folder']
-    if config['subfolders'] == 'daily':
+    if config['subfolders']:
         new_path = os.path.join(new_path, image_data['datetime'].strftime("%Y_%m_%d"))
     return new_path
 
@@ -144,7 +144,18 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Sort images in correct order')
     parser.add_argument('input_folders', metavar='I', nargs='+',
                     help='an integer for the accumulator')
-    parser.add_argument('-o', '--out', help='output folder', dest='output_folder', metavar='folder', required=True)
+    parser.add_argument('-n', '--dry_run',
+                    help='perform dry run',
+                    dest='dry_run', required=False, action='store_true')
+    parser.add_argument('-m', '--move',
+                    help='move files instead of copying them',
+                    dest='move_files', required=False, action='store_true')
+    parser.add_argument('-s', '--subfolders',
+                    help='create subfolders for each day of the trip',
+                    dest='subfolders', required=False, action='store_true')
+    parser.add_argument('-o', '--out', metavar='folder',
+                    help='output folder',
+                    dest='output_folder', required=True)
     args = parser.parse_args()
     result = {}
     print(str(args))
@@ -155,12 +166,9 @@ def parse_args():
         result['input_folders'] = folders
     if args.output_folder:
         result['output_folder'] = os.path.abspath(args.output_folder)
-# TODO configure dry run
-    result['dry_run'] = False
-# TODO configure move/copy
-    result['move_files'] = False
-# TODO configure subfolders
-    result['subfolders'] = 'daily'
+    result['dry_run'] = args.dry_run
+    result['move_files'] = args.move_files
+    result['subfolders'] = args.subfolders
     return result
 
 def main():
