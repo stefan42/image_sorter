@@ -70,7 +70,7 @@ def get_new_image_path(config, image_data):
     return new_path
 
 def get_new_raw_image_path(config, image_data):
-    return os.path.join(get_new_image_path(config, image_data, "raw"))
+    return os.path.join(get_new_image_path(config, image_data), "raw")
 
 def get_raw_image_name(image_name):
     p = re.compile('(.*)jpg$', re.IGNORECASE)
