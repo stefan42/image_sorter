@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import exifread
 import argparse
 import shutil
+import re
 import sys
 import os
 
@@ -14,7 +15,7 @@ def is_image_data_valid(image_data):
 
 def adjust_image_data(image_data):
     if image_data['camera'] == 'Canon PowerShot SX270 HS':
-        image_data['datetime'] = image_data['datetime'] + timedelta(hours=1)
+        image_data['datetime'] = image_data['datetime'] + timedelta(minutes=58)
     return image_data
 
 def adjust_image_datas(image_datas):
@@ -33,27 +34,74 @@ def split_valid_from_invalid_data(image_datas):
             invalid_datas.append(image_data)
     return (valid_datas, invalid_datas)
 
-def copy_valid_image(config, index, image_data):
-    old_image_name = image_data['image_name']
-    new_image_name = os.path.join(config['output_folder'], 'IMGWe are the {} who say "{}!"'.format('knights', 'Ni')    
+def get_file_op_str(config): 
+    if config['move_files']:
+        return 'move'
+    else:
+        return 'copy'
+
+def copy_file(config, old_file_name, new_file_name):
+    if not os.path.isfile(old_file_name):
+        print('unable to {} file \'{}\' to \'{}\' - old file does not exist'.format(get_file_op_str(config), old_file_name, new_file_name), file=sys.stderr)
+        return
+    if os.path.exists(new_file_name):
+        print('unable to {} file \'{}\' to \'{}\' - new file already exists'.format(get_file_op_str(config), old_file_name, new_file_name), file=sys.stderr)
+        return
+    
+    new_dir_name = os.path.dirname(new_file_name)
+    if not os.path.exists(new_dir_name):
+        print('creating new directory: ' + new_dir_name)
+        if not config['dry_run']: 
+            os.makedirs(new_dir_name)
+
+    print('{} file \'{}\' to \'{}\''.format(get_file_op_str(config), old_file_name, new_file_name))
+    
     if not config['dry_run']:
         if config['move_files']:
-            pass
-# TODO
+            shutil.move(old_file_name, new_file_name)
         else:
-            pass
-#            shutil.copy2(old_image_name, new_image_name)
-#            shutil.copy2(old_raw_name, new_ras_name)
-    pass
+            shutil.copy2(old_file_name, new_file_name)
+    return
+
+def get_new_image_path(config, image_data):
+    new_path = config['output_folder']
+    if config['subfolders'] == 'daily':
+        new_path = os.path.join(new_path, image_data['datetime'].strftime("%Y_%m_%d"))
+    return new_path
+
+def get_new_raw_image_path(config, image_data):
+    return os.path.join(get_new_image_path(config, image_data, "raw"))
+
+def get_raw_image_name(image_name):
+    p = re.compile('(.*)jpg$', re.IGNORECASE)
+    m = p.match(image_name)
+    if not m:
+        print('unable to get raw image name for ' + image_name, file=sys.stderr)
+        return None
+    raw_image_name = m.group(1) + 'CR2'
+    if os.path.isfile(raw_image_name):
+        return raw_image_name
+    else:
+        return None
+
+def copy_valid_image(config, index, image_data):
+    old_image_name = image_data['image_name']
+    new_image_name = os.path.join(get_new_image_path(config, image_data), 'IMG_{:05d}_{}.jpg'.format(index, image_data['datetime'].strftime("%Y%m%d_%H%M%S")))
+    copy_file(config, old_image_name, new_image_name)
+    old_raw_image_name = get_raw_image_name(old_image_name)
+    if old_raw_image_name:
+        new_raw_image_name = os.path.join(get_new_raw_image_path(config, image_data), 'IMG_{:05d}_{}.CR2'.format(index, image_data['datetime'].strftime("%Y%m%d_%H%M%S")))
+        copy_file(config, old_raw_image_name, new_raw_image_name)
 
 def copy_invalid_image(config, image_data):
 # TODO
-    pass
+    print('not implemented yet', file=sys.stderr)
+    sys.exit(1)
 
 def copy_images(config, image_datas):
     (valid_datas, invalid_datas) = split_valid_from_invalid_data(image_datas)
-    print('Got ' + str(len(valid_datas)) + ' with correct EXIF datetimes, but ' + str(len(invalid_datas)) + ' without')
-    sorted_valid_images_datas = sorted(valid_datas, key=lambda k: k['datetime'])
+    print('Got {} with correct EXIF datetimes, but {} without'.format(len(valid_datas), len(invalid_datas)))
+    sorted_valid_images_datas = sorted(adjust_image_datas(valid_datas), key=lambda k: k['datetime'])
     image_index = 1
     for image_data in sorted_valid_images_datas:
         copy_valid_image(config, image_index, image_data)
@@ -101,13 +149,18 @@ def parse_args():
     result = {}
     print(str(args))
     if args.input_folders:
-        result['input_folders'] = args.input_folders
+        folders = []
+        for input_folder in args.input_folders:
+            folders.append(os.path.abspath(input_folder))
+        result['input_folders'] = folders
     if args.output_folder:
-        result['output_folder'] = args.output_folder
+        result['output_folder'] = os.path.abspath(args.output_folder)
 # TODO configure dry run
-    result['dry_run'] = True
+    result['dry_run'] = False
 # TODO configure move/copy
-    result['move_files'] = True
+    result['move_files'] = False
+# TODO configure subfolders
+    result['subfolders'] = 'daily'
     return result
 
 def main():
