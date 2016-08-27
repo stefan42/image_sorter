@@ -143,7 +143,7 @@ def scan_input_folders(input_folders):
 def parse_args():
     parser = argparse.ArgumentParser(description='Sort images in correct order')
     parser.add_argument('input_folders', metavar='I', nargs='+',
-                    help='an integer for the accumulator')
+                    help='input folders')
     parser.add_argument('-n', '--dry_run',
                     help='perform dry run',
                     dest='dry_run', required=False, action='store_true')
