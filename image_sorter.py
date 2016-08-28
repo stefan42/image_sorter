@@ -94,9 +94,8 @@ def copy_valid_image(config, index, image_data):
         copy_file(config, old_raw_image_name, new_raw_image_name)
 
 def copy_invalid_image(config, image_data):
-# TODO
-    print('not implemented yet', file=sys.stderr)
-    sys.exit(1)
+    print('WARNING: {} has no exif data, skipping'.format(image_data['image_name']), file=sys.stderr)
+    pass
 
 def copy_images(config, image_datas):
     (valid_datas, invalid_datas) = split_valid_from_invalid_data(image_datas)
