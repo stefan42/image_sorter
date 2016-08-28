@@ -131,11 +131,11 @@ def scan_input_folders(input_folders):
     image_datas = []
     for input_folder in input_folders:
         if (not os.path.isdir(input_folder)):
-            print('Error: input directory ' + input_dir + ' does not exist.')
+            print('Error: input directory ' + input_dir + ' does not exist.', file=sys.stderr)
             sys.exit(1)
         for file_name in os.listdir(input_folder):
             norm_file_name = file_name.lower()
-            print('processing: ' + file_name)
+            # print('processing: ' + file_name)
             if norm_file_name.endswith(".jpg") or norm_file_name.endswith('.jpeg'):
                 image_datas.append(scan_image(os.path.join(input_folder, file_name)))
     return image_datas
@@ -158,7 +158,7 @@ def parse_args():
                     dest='output_folder', required=True)
     args = parser.parse_args()
     result = {}
-    print(str(args))
+    # print(str(args))
     if args.input_folders:
         folders = []
         for input_folder in args.input_folders:
@@ -173,7 +173,7 @@ def parse_args():
 
 def main():
     config = parse_args()
-    print(config)
+    # print(config)
     image_datas = scan_input_folders(config['input_folders'])
     print('scanned ' + str(len(image_datas)) + ' images')
 
