@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 # -*- coding: utf-8 -*-
-from datetime import datetime, timedelta
+from enum import Enum
+from datetime import datetime, timedelta, date
 import exifread
 import argparse
 import shutil
@@ -9,13 +10,17 @@ import re
 import sys
 import os
 
+class CopyMode(Enum):
+    MOVE = 1
+    COPY = 2
+    LINK = 3
+    UNKNOWN = 4
+
 
 def is_image_data_valid(image_data):
     return 'datetime' in image_data
 
 def adjust_image_data(image_data):
-    if image_data['camera'] == 'Canon PowerShot SX270 HS':
-        image_data['datetime'] = image_data['datetime'] + timedelta(minutes=58)
     return image_data
 
 def adjust_image_datas(image_datas):
@@ -35,10 +40,14 @@ def split_valid_from_invalid_data(image_datas):
     return (valid_datas, invalid_datas)
 
 def get_file_op_str(config): 
-    if config['move_files']:
+    if config['copy_mode'] is CopyMode.MOVE:
         return 'move'
-    else:
+    elif config['copy_mode'] is CopyMode.COPY:
         return 'copy'
+    elif config['copy_mode'] is CopyMode.LINK:
+        return 'link'
+    else:
+        return 'UNKNOWN'
 
 def copy_file(config, old_file_name, new_file_name):
     if not os.path.isfile(old_file_name):
@@ -57,10 +66,14 @@ def copy_file(config, old_file_name, new_file_name):
     print('{} file \'{}\' to \'{}\''.format(get_file_op_str(config), old_file_name, new_file_name))
     
     if not config['dry_run']:
-        if config['move_files']:
+        if config['copy_mode'] is CopyMode.MOVE:
             shutil.move(old_file_name, new_file_name)
-        else:
+        elif config['copy_mode'] is CopyMode.COPY:
             shutil.copy2(old_file_name, new_file_name)
+        elif config['copy_mode'] is CopyMode.LINK:
+            os.symlink(old_file_name, new_file_name)
+        else:
+            sys.exit(1)
     return
 
 def get_new_image_path(config, image_data):
@@ -139,6 +152,15 @@ def scan_input_folders(input_folders):
                 image_datas.append(scan_image(os.path.join(input_folder, file_name)))
     return image_datas
 
+def parse_copy_mode(input_string):
+    if input_string == "move":
+        return CopyMode.MOVE
+    if input_string == "copy":
+        return CopyMode.COPY
+    if input_string == "link":
+        return CopyMode.LINK
+    return CopyMode.UNKOWN
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Sort images in correct order')
     parser.add_argument('input_folders', metavar='I', nargs='+',
@@ -146,9 +168,9 @@ def parse_args():
     parser.add_argument('-n', '--dry_run',
                     help='perform dry run',
                     dest='dry_run', required=False, action='store_true')
-    parser.add_argument('-m', '--move',
-                    help='move files instead of copying them',
-                    dest='move_files', required=False, action='store_true')
+    parser.add_argument('-m', '--copy_mode',
+                    help='specify the copy mode, allowed values [copy,move,link]',
+                    dest='copy_mode', required=True)
     parser.add_argument('-s', '--subfolders',
                     help='create subfolders for each day of the trip',
                     dest='subfolders', required=False, action='store_true')
@@ -166,7 +188,7 @@ def parse_args():
     if args.output_folder:
         result['output_folder'] = os.path.abspath(args.output_folder)
     result['dry_run'] = args.dry_run
-    result['move_files'] = args.move_files
+    result['copy_mode'] = parse_copy_mode(args.copy_mode)
     result['subfolders'] = args.subfolders
     return result
 
