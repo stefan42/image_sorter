@@ -39,7 +39,7 @@ def split_valid_from_invalid_data(image_datas):
             valid_datas.append(image_data)
         else:
             invalid_datas.append(image_data)
-    return (valid_datas, invalid_datas)
+    return valid_datas, invalid_datas
 
 
 def get_file_op_str(config):
@@ -116,10 +116,9 @@ def copy_valid_image(config, index, image_data):
     copy_file(config, old_image_name, new_image_name)
     old_raw_image_name = get_raw_image_name(old_image_name)
     if old_raw_image_name:
-        new_raw_image_name = os.path.join(get_new_raw_image_path(config, image_data), 'IMG_{:05d}_{}.CR2'.format(index,
-                                                                                                                 image_data[
-                                                                                                                     'datetime'].strftime(
-                                                                                                                     "%Y%m%d_%H%M%S")))
+        new_raw_image_name = os.path.join(get_new_raw_image_path(config, image_data),
+                                          'IMG_{:05d}_{}.CR2'.format(index,
+                                                                     image_data['datetime'].strftime("%Y%m%d_%H%M%S")))
         copy_file(config, old_raw_image_name, new_raw_image_name)
 
 
@@ -143,8 +142,7 @@ def copy_images(config, image_datas):
 def scan_image(image_name):
     f = open(image_name, 'rb')
     tags = exifread.process_file(f, details=False)
-    result = {}
-    result['image_name'] = image_name
+    result = {'image_name': image_name}
     if 'EXIF DateTimeOriginal' in tags:
         date_str = ''
         try:
@@ -162,7 +160,7 @@ def scan_image(image_name):
 def scan_input_folders(input_folders):
     image_datas = []
     for input_folder in input_folders:
-        if (not os.path.isdir(input_folder)):
+        if not os.path.isdir(input_folder):
             print('Error: input directory ' + input_folder + ' does not exist.', file=sys.stderr)
             sys.exit(1)
         for file_name in os.listdir(input_folder):
